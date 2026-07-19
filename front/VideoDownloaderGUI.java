@@ -297,7 +297,7 @@ public class VideoDownloaderGUI extends JFrame {
     public static void main(String[] args) {
         // Optional first arg: path to the "python" folder containing backend_cli.py.
         // Defaults to a "python" folder next to wherever the app is run from.
-        String pythonDir = args.length > 0 ? args[0] : Paths.get("python").toAbsolutePath().toString();
+        String pythonDir = args.length > 0 ? args[0] : Paths.get("front").toAbsolutePath().toString();
 
         SwingUtilities.invokeLater(() -> {
             try {
