@@ -295,9 +295,19 @@ public class VideoDownloaderGUI extends JFrame {
     }
 
     public static void main(String[] args) {
-        // Optional first arg: path to the "python" folder containing backend_cli.py.
-        // Defaults to a "python" folder next to wherever the app is run from.
-        String pythonDir = args.length > 0 ? args[0] : Paths.get("front").toAbsolutePath().toString();
+        // Optional first arg: path to the folder containing backend_cli.py.
+        // Defaults to the back folder relative to the current working directory.
+        String pythonDir;
+        if (args.length > 0) {
+            pythonDir = args[0];
+        } else {
+            String candidate = Paths.get("back").toAbsolutePath().toString();
+            if (new File(candidate, "backend_cli.py").exists()) {
+                pythonDir = candidate;
+            } else {
+                pythonDir = Paths.get("..", "back").toAbsolutePath().toString();
+            }
+        }
 
         SwingUtilities.invokeLater(() -> {
             try {

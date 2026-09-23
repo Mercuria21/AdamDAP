@@ -7,6 +7,9 @@ def download_video(url, output_format=None):
 
     ydl_opts = {
         'outtmpl': 'temp/%(title)s.%(ext)s',
+        'noplaylist': True,
+        'socket_timeout': 15,
+        'retries': 3,
     }
 
     audio_exts = {'mp3', 'wav', 'm4a', 'aac', 'opus'}
