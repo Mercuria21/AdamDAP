@@ -13,7 +13,10 @@ import java.awt.image.BufferedImage;
 import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Paths;
+import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.function.Consumer;
 
 /**
@@ -23,7 +26,7 @@ import java.util.function.Consumer;
  * - Palette: Catppuccin Mocha-inspired deep dark (#181825, #1E1E2E, #252538)
  * - Accents: Vibrant purple (#A06CD5, #B482E8, #8A56BF)
  * - Geometry: Smooth rounded corners (12px radius)
- * - Typography: JetBrains Mono family (bundled TTFs with system & monospaced fallbacks)
+ * - Typography: UDEV Gothic (bundled TTF or system) with CJK-capable fallbacks
  * - Usability: Quick paste/clear, format badges, live status pill, open in Explorer
  */
 public class VideoDownloaderGUI extends JFrame {
@@ -57,27 +60,98 @@ public class VideoDownloaderGUI extends JFrame {
     private static Font FONT_LIGHT;
 
     static {
-        try {
-            FONT_REGULAR = loadBundledFont("fonts/JetBrainsMono-Regular.ttf", 13f);
-            FONT_MEDIUM  = loadBundledFont("fonts/JetBrainsMono-Medium.ttf", 13f);
-            FONT_BOLD    = loadBundledFont("fonts/JetBrainsMono-Bold.ttf", 13f);
-            FONT_LIGHT   = loadBundledFont("fonts/JetBrainsMono-Light.ttf", 13f);
-        } catch (Exception e) {
-            FONT_REGULAR = new Font("JetBrains Mono", Font.PLAIN, 13);
-            FONT_MEDIUM  = new Font("JetBrains Mono Medium", Font.PLAIN, 13);
-            FONT_BOLD    = new Font("JetBrains Mono", Font.BOLD, 13);
-            FONT_LIGHT   = new Font("JetBrains Mono Light", Font.PLAIN, 13);
-
-            if (!FONT_REGULAR.getFamily().toLowerCase().contains("jetbrains")) {
-                FONT_REGULAR = new Font(Font.MONOSPACED, Font.PLAIN, 13);
-                FONT_MEDIUM  = new Font(Font.MONOSPACED, Font.PLAIN, 13);
-                FONT_BOLD    = new Font(Font.MONOSPACED, Font.BOLD, 13);
-                FONT_LIGHT   = new Font(Font.MONOSPACED, Font.PLAIN, 13);
-            }
-        }
+        FONT_REGULAR = initJapaneseCapableFont(
+                new String[]{
+                        "fonts/UDEVGothic-Regular.ttf",
+                        "fonts/UDEVGothicNF-Regular.ttf",
+                        "fonts/UDEVGothicJPDOC-Regular.ttf",
+                        "fonts/UDEVGothic35-Regular.ttf",
+                        "fonts/UDEVGothic35NF-Regular.ttf"
+                },
+                Font.PLAIN, 13f
+        );
+        FONT_MEDIUM = initJapaneseCapableFont(
+                new String[]{
+                        "fonts/UDEVGothic-Medium.ttf",
+                        "fonts/UDEVGothic-Regular.ttf",
+                        "fonts/UDEVGothicNF-Regular.ttf",
+                        "fonts/UDEVGothicJPDOC-Regular.ttf",
+                        "fonts/UDEVGothic35-Regular.ttf"
+                },
+                Font.PLAIN, 13f
+        );
+        FONT_BOLD = initJapaneseCapableFont(
+                new String[]{
+                        "fonts/UDEVGothic-Bold.ttf",
+                        "fonts/UDEVGothicNF-Bold.ttf",
+                        "fonts/UDEVGothicJPDOC-Bold.ttf",
+                        "fonts/UDEVGothic35-Bold.ttf",
+                        "fonts/UDEVGothic35NF-Bold.ttf",
+                        "fonts/UDEVGothic-Regular.ttf"
+                },
+                Font.BOLD, 13f
+        );
+        FONT_LIGHT = initJapaneseCapableFont(
+                new String[]{
+                        "fonts/UDEVGothic-Light.ttf",
+                        "fonts/UDEVGothic-Regular.ttf",
+                        "fonts/UDEVGothicNF-Regular.ttf",
+                        "fonts/UDEVGothicJPDOC-Regular.ttf",
+                        "fonts/UDEVGothic35-Regular.ttf"
+                },
+                Font.PLAIN, 13f
+        );
     }
 
-    private static Font loadBundledFont(String resourcePath, float size) {
+    /**
+     * Loads UDEV Gothic (bundled TTF first, then installed system font variants),
+     * falling back to CJK-capable system fonts and Java's logical composite font
+     * so Japanese characters (Kanji, Hiragana, Katakana) render cleanly.
+     */
+    private static Font initJapaneseCapableFont(String[] bundledPaths, int style, float size) {
+        // 1. Try bundled UDEV Gothic TTF files
+        for (String path : bundledPaths) {
+            Font loaded = loadBundledFont(path, style, size);
+            if (loaded != null && loaded.canDisplay('あ') && loaded.canDisplay('漢')) {
+                return loaded;
+            }
+        }
+
+        // 2. Check installed system fonts (UDEV Gothic variants first, then OS CJK fonts)
+        Set<String> available = new HashSet<>(Arrays.asList(
+                GraphicsEnvironment.getLocalGraphicsEnvironment().getAvailableFontFamilyNames()
+        ));
+
+        String[] preferredFamilies = {
+                "UDEV Gothic",
+                "UDEV Gothic NF",
+                "UDEV Gothic JPDOC",
+                "UDEV Gothic 35",
+                "UDEV Gothic 35NF",
+                "UDEV Gothic 35JPDOC",
+                "Yu Gothic UI",
+                "Meiryo",
+                "MS Gothic",
+                "Noto Sans CJK JP",
+                "Noto Sans JP",
+                "Hiragino Kaku Gothic ProN",
+                "Hiragino Sans",
+                Font.DIALOG // Logical composite font with automatic OS CJK fallback
+        };
+
+        for (String family : preferredFamilies) {
+            if (family.equals(Font.DIALOG) || available.contains(family)) {
+                Font candidate = new Font(family, style, Math.round(size));
+                if (candidate.canDisplay('あ') && candidate.canDisplay('漢')) {
+                    return candidate.deriveFont(style, size);
+                }
+            }
+        }
+
+        return new Font(Font.DIALOG, style, Math.round(size)).deriveFont(style, size);
+    }
+
+    private static Font loadBundledFont(String resourcePath, int style, float size) {
         InputStream is = VideoDownloaderGUI.class.getResourceAsStream("/" + resourcePath);
         if (is == null) is = VideoDownloaderGUI.class.getResourceAsStream(resourcePath);
         if (is == null) {
@@ -91,13 +165,13 @@ public class VideoDownloaderGUI extends JFrame {
             try {
                 Font font = Font.createFont(Font.TRUETYPE_FONT, is);
                 GraphicsEnvironment.getLocalGraphicsEnvironment().registerFont(font);
-                return font.deriveFont(size);
+                return font.deriveFont(style, size);
             } catch (Exception ignored) {
             } finally {
                 try { is.close(); } catch (IOException ignored) {}
             }
         }
-        throw new RuntimeException("Font not found: " + resourcePath);
+        return null;
     }
 
     // ── Format Model ───────────────────────────────────────────────────
@@ -171,6 +245,11 @@ public class VideoDownloaderGUI extends JFrame {
     public VideoDownloaderGUI(String pythonDir) {
         super("AdamDAP · Media Downloader & Converter");
         this.pythonDir = pythonDir;
+
+        // Ensure tooltips also use UDEV Gothic
+        UIManager.put("ToolTip.font", FONT_REGULAR.deriveFont(12f));
+        UIManager.put("ToolTip.background", BG_SURFACE);
+        UIManager.put("ToolTip.foreground", TEXT_PRIMARY);
 
         // Progress bar smooth animation timer
         this.progressAnimTimer = new Timer(30, e -> {
@@ -812,6 +891,7 @@ public class VideoDownloaderGUI extends JFrame {
         titleLabel.setToolTipText(null);
         durationLabel.setText("—");
         uploaderLabel.setText("—");
+        uploaderLabel.setToolTipText(null);
         bitrateLabel.setText("—");
         downloadButton.setEnabled(false);
     }
@@ -983,6 +1063,7 @@ public class VideoDownloaderGUI extends JFrame {
             titleLabel.setToolTipText(pendingTitle);
             durationLabel.setText(formatDuration(pendingDuration));
             uploaderLabel.setText(pendingUploader);
+            uploaderLabel.setToolTipText(pendingUploader);
             bitrateLabel.setText(pendingBitrate + " kbps");
             downloadButton.setEnabled(true);
             log("✓ Media info loaded successfully: " + pendingTitle);
@@ -1094,6 +1175,11 @@ public class VideoDownloaderGUI extends JFrame {
             ProcessBuilder pb = new ProcessBuilder(command);
             pb.directory(new File(pythonDir));
             pb.redirectErrorStream(true);
+
+            // Force UTF-8 output from Python so Japanese titles/paths don't mojibake or fail on Windows
+            pb.environment().put("PYTHONUTF8", "1");
+            pb.environment().put("PYTHONIOENCODING", "utf-8");
+
             Process process = pb.start();
             activeProcess = process;
 
