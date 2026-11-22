@@ -114,7 +114,12 @@ try {
     Safe-RemovePath $BuildJarDir
     New-Item -ItemType Directory -Force -Path $ClassesDir | Out-Null
 
-    & $Javac -d $ClassesDir front/VideoDownloaderGUI.java
+    & $Javac -encoding UTF-8 -d $ClassesDir front/VideoDownloaderGUI.java
+
+    # Copy bundled font files into classes dir so they're included in the JAR
+    $FontsDestDir = "$ClassesDir/fonts"
+    New-Item -ItemType Directory -Force -Path $FontsDestDir | Out-Null
+    Copy-Item "front/fonts/*.ttf" -Destination $FontsDestDir -Force
 
     $Manifest = "$BuildJarDir/MANIFEST.MF"
     "Main-Class: VideoDownloaderGUI`n" | Set-Content -Path $Manifest -NoNewline
