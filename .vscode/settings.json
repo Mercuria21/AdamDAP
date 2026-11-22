@@ -1,0 +1,17 @@
+{
+    "files.exclude": {
+        "**/release": true,
+        "**/build_jar": true,
+        "**/dist_backend": true,
+        "**/build_pyinstaller": true,
+        "**/.venv": true
+    },
+    "java.project.resourceFilters": [
+        "node_modules",
+        ".git",
+        "release",
+        "build_jar",
+        "dist_backend",
+        "build_pyinstaller"
+    ]
+}
