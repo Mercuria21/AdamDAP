@@ -2,8 +2,8 @@
 Simple line-based bridge between the Java GUI and the existing Python
 download/convert logic. Designed to be called as a subprocess:
 
-    python3 -u backend_cli.py info <url>
-    python3 -u backend_cli.py process <url> <format>
+    python -u backend_cli.py info <url>
+    python -u backend_cli.py process <url> <format>
 
 Output protocol (one message per line, always flushed immediately):
 
@@ -21,8 +21,15 @@ Output protocol (one message per line, always flushed immediately):
     (or) ERROR:<message>
 """
 
-import sys
 import os
+import sys
+
+# Ensure stdout and stderr use UTF-8 on Windows
+if sys.platform == 'win32':
+    if hasattr(sys.stdout, 'reconfigure'):
+        sys.stdout.reconfigure(encoding='utf-8', errors='replace')
+    if hasattr(sys.stderr, 'reconfigure'):
+        sys.stderr.reconfigure(encoding='utf-8', errors='replace')
 
 from metadata import get_info
 from downloader import download_video
@@ -39,27 +46,33 @@ def cmd_info(url):
         print(f"BITRATE:{bitrate}", flush=True)
         print("DONE", flush=True)
     except Exception as e:
-        print(f"ERROR:{e}", flush=True)
+        msg = str(e).strip()
+        if msg.startswith("ERROR:"):
+            msg = msg[6:].strip()
+        print(f"ERROR:{msg}", flush=True)
 
 
 def cmd_process(url, output_format):
     try:
-        print("STATUS:Downloading video...", flush=True)
-        downloaded_file = download_video(url, output_format)
+        requested = output_format.strip().lstrip('.').lower()
+        print("STATUS:Downloading media...", flush=True)
+        downloaded_file = download_video(url, requested)
 
         download_ext = os.path.splitext(downloaded_file)[1].lstrip('.').lower()
-        requested = output_format.strip().lower()
 
         if download_ext == requested:
             print("STATUS:Downloaded file already in requested format; skipping conversion.", flush=True)
             output_file = downloaded_file
         else:
-            print("STATUS:Converting file...", flush=True)
-            output_file = convert_file(downloaded_file, output_format)
+            print(f"STATUS:Converting from {download_ext} to {requested}...", flush=True)
+            output_file = convert_file(downloaded_file, requested)
 
         print(f"FILE:{os.path.abspath(output_file)}", flush=True)
     except Exception as e:
-        print(f"ERROR:{e}", flush=True)
+        msg = str(e).strip()
+        if msg.startswith("ERROR:"):
+            msg = msg[6:].strip()
+        print(f"ERROR:{msg}", flush=True)
 
 
 def main():
@@ -67,7 +80,7 @@ def main():
         print("ERROR:No command given", flush=True)
         return
 
-    command = sys.argv[1]
+    command = sys.argv[1].lower()
 
     if command == 'info':
         if len(sys.argv) < 3:

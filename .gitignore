@@ -1,1 +1,31 @@
+# Virtual environment
+.venv/
+venv/
+ENV/
+
+# Python cache & artifacts
+__pycache__/
+*.py[cod]
+*$py.class
+*.dist-info/
+
+# Java compilation artifacts
+*.class
+*.jar
+
+# Build & packaging output
+release/
+dist_backend/
+build_pyinstaller/
+build_jar/
+build/
+*.spec
+
+# Temporary downloads and conversions
+temp/
+back/temp/
+
+# IDE / Editor files
 .vscode/extensions.json
+.idea/
+*.swp
